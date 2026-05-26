@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anor — Decompress and Breathe</title>
+  <meta name="description" content="Anor is a digital decompression tool. Empty your mind, let go of the noise, and breathe.">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom Styling (Contains wave drift, custom buttons, transitions) -->
+  <link rel="stylesheet" href="styles.css?v=1.19">
+  
+  <!-- Tailwind CSS Play CDN (v3.4) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            sand: {
+              50: '#faf8f5',
+              100: '#f5eedc',
+            },
+            sage: {
+              300: '#b5c7b1',
+              500: '#7b9474',
+              700: '#5c7256',
+            },
+            slate: {
+              600: '#526275',
+              800: '#2b3541',
+              900: '#141920',
+            }
+          },
+          fontFamily: {
+            serif: ['Playfair Display', 'Georgia', 'serif'],
+            sans: ['Outfit', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen relative flex flex-col justify-between font-sans selection:bg-sage-300/30 selection:text-sage-700">
+
+  <!-- DYNAMIC BACKGROUND CANVAS LAYERS (Smooth opacity cross-fader) -->
+  <div id="anor-bg-welcome" class="anor-bg-color bg-state-welcome active-bg" aria-hidden="true"></div>
+  <div id="anor-bg-retreat" class="anor-bg-color bg-state-retreat" aria-hidden="true"></div>
+
+  <!-- THE LIVING OCEAN BACKGROUND -->
+  <div class="ocean-background" aria-hidden="true">
+    <svg style="width:0; height:0; position:absolute;" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="wave-grad-1" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#b5c7b1" stop-opacity="0.25" />
+          <stop offset="100%" stop-color="#7b9474" stop-opacity="0.05" />
+        </linearGradient>
+        <linearGradient id="wave-grad-2" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#7b9474" stop-opacity="0.3" />
+          <stop offset="100%" stop-color="#5c7256" stop-opacity="0.08" />
+        </linearGradient>
+        <linearGradient id="wave-grad-3" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#586b53" stop-opacity="0.18" />
+          <stop offset="100%" stop-color="#2b3541" stop-opacity="0.02" />
+        </linearGradient>
+
+        <linearGradient id="wave-grad-dark-1" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#1e303e" stop-opacity="0.45" />
+          <stop offset="100%" stop-color="#141920" stop-opacity="0.1" />
+        </linearGradient>
+        <linearGradient id="wave-grad-dark-2" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#162630" stop-opacity="0.55" />
+          <stop offset="100%" stop-color="#0c0f14" stop-opacity="0.15" />
+        </linearGradient>
+        <linearGradient id="wave-grad-dark-3" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#7b9474" stop-opacity="0.12" />
+          <stop offset="100%" stop-color="#141920" stop-opacity="0.02" />
+        </linearGradient>
+      </defs>
+    </svg>
+    <svg class="wave-svg wave-1" viewBox="0 0 1500 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,60 C150,100 350,20 500,60 C650,100 850,20 1000,60 C1150,100 1350,20 1500,60 L1500,120 L0,120 Z"></path>
+    </svg>
+    <svg class="wave-svg wave-2" viewBox="0 0 1500 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,50 C200,90 400,10 600,50 C800,90 1000,10 1200,50 C1400,90 1600,10 1800,50 L1800,120 L0,120 Z"></path>
+    </svg>
+    <svg class="wave-svg wave-3" viewBox="0 0 1500 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,75 C100,115 250,35 400,75 C550,115 700,35 850,75 C1000,115 1150,35 1300,75 L1300,120 L0,120 Z"></path>
+    </svg>
+  </div>
+
+  <!-- CONTENT WRAPPER (Placed at positive z-index 10 above backdrops) -->
+  <div class="relative z-10 min-h-screen flex flex-col justify-between">
+
+  <!-- Header / Minimal Navigation -->
+  <header class="w-full max-w-7xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 z-30 select-none">
+    <!-- Brand Logo -->
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-full bg-sage-500/10 border border-sage-500/20 flex items-center justify-center">
+        <svg class="w-4.5 h-4.5 text-sage-500 dark:text-sage-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path>
+        </svg>
+      </div>
+      <h1 class="text-xl font-serif font-semibold tracking-wide text-slate-800 dark:text-slate-100">
+        Anor
+      </h1>
+    </div>
+
+    <!-- Permanent Selectors (No Disappearing Menus) -->
+    <div class="flex items-center gap-3.5 flex-wrap justify-center">
+      <!-- Permanent Sound Selector Dock -->
+      <div class="selector-dock" id="sound-dock">
+        <button onclick="switchSound('mute')" id="sound-mute" class="selector-btn active"><i class="fa-solid fa-volume-xmark"></i> Mute</button>
+        <button onclick="switchSound('rain')" id="sound-rain" class="selector-btn"><i class="fa-solid fa-cloud-rain"></i> Rain</button>
+        <button onclick="switchSound('ocean')" id="sound-ocean" class="selector-btn"><i class="fa-solid fa-water"></i> Ocean</button>
+        <button onclick="switchSound('forest')" id="sound-forest" class="selector-btn"><i class="fa-solid fa-tree"></i> Forest</button>
+      </div>
+
+      <!-- Permanent Breathe Pacing Selector Dock -->
+      <div class="selector-dock" id="breathe-dock">
+        <button onclick="setBreatheMode('box')" id="breathe-box" class="selector-btn active"><i class="fa-solid fa-wind"></i> Box</button>
+        <button onclick="setBreatheMode('calm')" id="breathe-calm" class="selector-btn"><i class="fa-solid fa-leaf"></i> Calm</button>
+        <button onclick="setBreatheMode('slow')" id="breathe-slow" class="selector-btn"><i class="fa-solid fa-water"></i> Slow</button>
+      </div>
+
+      <!-- Daily Streak Badge -->
+      <div id="streak-badge" class="px-3 py-1.5 rounded-full glass-panel flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 select-none hover:scale-105 transition-all" title="Your Sanctuary Streak">
+        <span class="text-amber-500">✨</span>
+        <span id="streak-count">0</span> Days
+      </div>
+
+      <!-- Theme Switcher -->
+      <button id="theme-toggle" class="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-slate-600 dark:text-slate-300 hover:scale-105 transition-transform" title="Toggle Mode">
+        <i class="fa-solid fa-moon text-xs" id="theme-icon"></i>
+      </button>
+
+      <!-- VIP Lounge Button -->
+      <button onclick="triggerFullScreenPause('vip')" id="vip-header-btn" class="px-3.5 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-[11px] font-bold text-amber-600 dark:text-amber-300 select-none hover:scale-105 hover:bg-amber-500/20 active:scale-95 transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(245,158,11,0.1)]" title="Enter VIP Sanctuary Elite">
+        <span>✨ VIP Lounge</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Application Body -->
+  <main class="flex-grow flex items-center justify-center px-4 py-6 w-full max-w-5xl mx-auto relative min-h-[65vh]">
+
+    <!-- ==================== STATE 1: LANDING PAGE ==================== -->
+    <section id="state-dump" class="page-state state-active w-full max-w-2xl flex flex-col items-center text-center">
+      <div class="mb-6 select-none">
+        <h2 class="text-3xl sm:text-4xl font-serif text-slate-800 dark:text-slate-100 font-normal">
+          It's a lot right now.
+        </h2>
+        <p class="mt-2 text-sm md:text-base text-slate-500 dark:text-slate-400 font-light max-w-md mx-auto">
+          Just write everything here and let it go. We will lock away the noise and keep you grounded.
+        </p>
+      </div>
+
+      <!-- Text Dump Input Box -->
+      <div id="mind-input-container" class="w-full relative glass-panel textarea-breathe-glow rounded-3xl p-5 mb-6">
+        <textarea id="mind-input" 
+                  class="w-full h-48 bg-transparent resize-none border-none outline-none text-slate-800 dark:text-slate-100 placeholder-slate-400/70 text-base font-light leading-relaxed focus:ring-0"
+                  placeholder="Today I have so much in my head... review budget drafts, email Linda about delays, buy groceries, fix the kitchen noise, clean the living room, and my shoulders feel extremely tense..."></textarea>
+        
+        <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-200/30 dark:border-white/5 text-[11px] text-slate-400 dark:text-slate-500 select-none">
+          <div class="flex items-center gap-2">
+            <span><strong id="char-count">0</strong> chars</span>
+            <span>•</span>
+            <span><strong id="word-count">0</strong> words</span>
+          </div>
+          <span class="italic text-sage-500 dark:text-sage-300 opacity-90" id="motivational-hint">Let it flow.</span>
+        </div>
+      </div>
+
+      <!-- Action Trigger -->
+      <button id="submit-dump" class="btn-premium px-8 py-3.5 bg-sage-500 hover:bg-sage-700 text-white rounded-full text-sm font-medium tracking-wide flex items-center gap-2.5">
+        <span>Hand it over</span>
+        <i class="fa-solid fa-arrow-right text-xs"></i>
+      </button>
+
+      <!-- Daily Poetic Reflection -->
+      <div id="daily-reflection" class="text-xs italic text-slate-400 dark:text-slate-500 font-serif font-light max-w-sm mt-12 text-center leading-relaxed opacity-0 transition-opacity duration-1000 select-none">
+        <!-- Will be populated dynamically -->
+      </div>
+    </section>
+
+
+    <!-- ==================== STATE 2: THINKING / PAUSE INTERVENTION ==================== -->
+    <section id="state-thinking" class="page-state state-hidden w-full max-w-md flex flex-col items-center text-center py-16 select-none">
+      <div class="wave-container mb-6">
+        <div class="wave-dot"></div>
+        <div class="wave-dot"></div>
+        <div class="wave-dot"></div>
+        <div class="wave-dot"></div>
+      </div>
+      <h3 class="text-xl font-serif text-slate-800 dark:text-slate-200 font-light mb-1" id="thinking-title">Securing your thoughts...</h3>
+      <p class="text-slate-500 dark:text-slate-400 text-xs italic font-light" id="thinking-subtitle">Locking away the bulk so you can focus on the now.</p>
+    </section>
+
+
+    <!-- ==================== STATE 3: SIMPLIFIED MINIMALIST DASHBOARD ==================== -->
+    <section id="state-intervention" class="page-state state-hidden w-full max-w-xl flex flex-col items-center">
+      
+      <!-- Unified Mindful Slate Card -->
+      <div id="room-slate" class="glass-panel rounded-3xl p-6 md:p-8 w-full flex flex-col gap-6">
+        
+        <!-- Feature A: Focus Item -->
+        <div class="pb-5 border-b border-slate-200/40 dark:border-white/5">
+          <span class="text-[10px] font-semibold tracking-widest text-sage-500 dark:text-sage-300 uppercase block mb-1">Focus on this today</span>
+          <h3 id="focus-item-text" class="text-base sm:text-lg text-slate-800 dark:text-slate-100 font-light leading-relaxed">
+            Take a slow step and focus on resolving the budget draft first.
+          </h3>
+        </div>
+
+        <!-- Feature B: Quiet somatic checkboxes -->
+        <div class="pb-5 border-b border-slate-200/40 dark:border-white/5">
+          <span class="text-[10px] font-semibold tracking-widest text-slate-400 dark:text-slate-500 uppercase block mb-3">Absurdly Simple Steps</span>
+          <div id="micro-steps-container" class="space-y-2">
+            <!-- Populated dynamically with checkboxes -->
+          </div>
+        </div>
+
+        <!-- Boundary copy panel -->
+        <div class="p-4 rounded-2xl bg-slate-50/50 border border-slate-200/30 dark:bg-slate-900/10 dark:border-white/5 flex justify-between items-center gap-4">
+          <div class="flex-grow">
+            <span class="text-[9px] font-semibold text-slate-400 block mb-1">Polite Boundary Response</span>
+            <p id="boundary-message" class="text-xs text-slate-500 dark:text-slate-400 font-light italic leading-normal">
+              "I am feeling a bit overwhelmed today, let's catch up on this tomorrow morning instead."
+            </p>
+          </div>
+          <button onclick="copyBoundaryMessage()" class="text-slate-400 hover:text-sage-500 dark:hover:text-sage-300 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0" title="Copy reply">
+            <i class="fa-regular fa-copy text-sm" id="copy-icon"></i>
+          </button>
+        </div>
+
+        <!-- Secured tomorrow chest link -->
+        <div class="p-4 rounded-2xl bg-sage-500/5 border border-sage-500/10 dark:bg-slate-800/10 dark:border-white/5 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="chest-box shrink-0 text-2xl text-sage-500 dark:text-sage-300" id="chest-icon">
+              <i class="fa-solid fa-box-archive"></i>
+            </div>
+            <div>
+              <h5 class="text-xs font-medium text-slate-800 dark:text-slate-200">The Secured Tomorrow Chest</h5>
+              <p class="text-[10px] text-slate-400 mt-0.5">
+                We've locked away <strong id="locked-percentage" class="text-sage-600 dark:text-sage-300">80%</strong> of your tasks.
+              </p>
+            </div>
+          </div>
+          <button onclick="toggleVaultModal(true)" class="px-3.5 py-1.5 border border-sage-500/20 text-sage-600 dark:text-sage-300 hover:bg-sage-500/10 rounded-xl text-xs font-medium transition-colors">
+            Review Locked
+          </button>
+        </div>
+
+        <!-- Entry button into Full-Screen Decompression Room -->
+        <div class="mt-2 pt-4 border-t border-slate-200/20 dark:border-white/5">
+          <button onclick="transitionToDecompression()" class="w-full btn-premium py-3 bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl text-xs font-semibold tracking-wide flex items-center justify-center gap-2">
+            <span>🧘 Step into Decompression Room</span>
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ==================== STATE 4: FULL-SCREEN DECOMPRESSION ROOM ==================== -->
+    <section id="state-decompression" class="page-state state-hidden w-full max-w-4xl flex flex-col items-center justify-between min-h-[60vh]">
+      
+      <!-- Back Navigation Bar -->
+      <div class="w-full flex justify-start mb-6 select-none">
+        <button onclick="transitionToSlate()" class="px-4 py-2 border border-slate-300 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 rounded-full text-xs font-medium tracking-wide transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left text-[10px]"></i>
+          <span>Back to Today's Slate</span>
+        </button>
+      </div>
+
+      <!-- Decompression Cards Row -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 w-full mb-8">
+        
+        <!-- Screen Focus Card -->
+        <div class="glass-panel decompression-card-focus rounded-3xl p-5 flex flex-col justify-between min-h-[16.5rem] h-auto hover:translate-y-[-4px] transition-transform duration-300">
+          <div>
+            <div class="flex items-center gap-2.5 mb-3 text-slate-800 dark:text-slate-200 select-none">
+              <span class="text-xl">🖥️</span>
+              <h4 class="text-xs uppercase tracking-wider font-semibold font-serif">Screen Focus</h4>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-light">
+              Rest your active mind. Hold down your pointer on the golden orb to isolate focal strain.
+            </p>
+          </div>
+          <button onclick="triggerFullScreenPause('mental')" class="w-full px-4 py-2.5 bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-semibold hover:opacity-90 transition-opacity">
+            Start Focus Hold
+          </button>
+        </div>
+
+        <!-- Somatic Grounding Card -->
+        <div class="glass-panel decompression-card-somatic rounded-3xl p-5 flex flex-col justify-between min-h-[16.5rem] h-auto hover:translate-y-[-4px] transition-transform duration-300">
+          <div>
+            <div class="flex items-center gap-2.5 mb-3 text-sage-700 dark:text-sage-300 select-none">
+              <span class="text-xl">🌬️</span>
+              <h4 class="text-xs uppercase tracking-wider font-semibold font-serif">Somatic Grounding</h4>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-light">
+              Re-engage with your body. Start a breathing cycle guiding jaw, neck, and foot relaxation.
+            </p>
+          </div>
+          <button onclick="triggerFullScreenPause('somatic')" class="w-full px-4 py-2.5 bg-sage-500 text-white rounded-xl text-xs font-semibold hover:bg-sage-700 transition-colors">
+            Start Posture Pacing
+          </button>
+        </div>
+
+        <!-- Sound Bath Card -->
+        <div class="glass-panel decompression-card-sound rounded-3xl p-5 flex flex-col justify-between min-h-[16.5rem] h-auto hover:translate-y-[-4px] transition-transform duration-300">
+          <div>
+            <div class="flex items-center gap-2.5 mb-3 text-amber-500 select-none">
+              <span class="text-xl">🎧</span>
+              <h4 class="text-xs uppercase tracking-wider font-semibold font-serif">Audio Horizon Bath</h4>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-light">
+              Soften your senses. Enjoy a binaural 528Hz Solfeggio sound bath panning left and right.
+            </p>
+          </div>
+          <button onclick="triggerFullScreenPause('audio')" class="w-full px-4 py-2.5 bg-amber-500 text-white rounded-xl text-xs font-semibold hover:bg-amber-600 transition-colors">
+            Start Sound Bath
+          </button>
+        </div>
+
+        <!-- Zen Nebula Sandbox Card -->
+        <div class="glass-panel decompression-card-sandbox rounded-3xl p-5 flex flex-col justify-between min-h-[16.5rem] h-auto hover:translate-y-[-4px] transition-transform duration-300">
+          <div>
+            <div class="flex items-center gap-2.5 mb-3 text-emerald-500 select-none">
+              <span class="text-xl">✨</span>
+              <h4 class="text-xs uppercase tracking-wider font-semibold font-serif">Zen Nebula Sandbox</h4>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-light">
+              Release tension. Draw glowing mist with your pointer to play pentatonic wind chimes.
+            </p>
+          </div>
+          <button onclick="triggerFullScreenPause('sandbox')" class="w-full px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold transition-colors">
+            Start Sandbox Draw
+          </button>
+        </div>
+
+        <!-- VIP Sanctuary Lounge Card -->
+        <div class="glass-panel decompression-card-vip rounded-3xl p-5 flex flex-col justify-between min-h-[16.5rem] h-auto border border-amber-500/20 bg-gradient-to-b from-amber-500/5 to-transparent hover:translate-y-[-4px] transition-transform duration-300 select-none">
+          <div>
+            <div class="flex items-center gap-2.5 mb-3 text-amber-500 select-none">
+              <span class="text-xl">👑</span>
+              <h4 class="text-xs uppercase tracking-wider font-semibold font-serif">VIP Sanctuary</h4>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-light">
+              The ultimate suite. Escape to a breathing fireplace, a liquid organ, and spatial rain.
+            </p>
+          </div>
+          <button onclick="triggerFullScreenPause('vip')" class="w-full px-4 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white rounded-xl text-xs font-semibold shadow-md shadow-amber-500/10 transition-all">
+            Enter VIP Lounge
+          </button>
+        </div>
+
+        <!-- Digital Aura Tuner Card -->
+        <div class="glass-panel decompression-card-aura rounded-3xl p-5 flex flex-col justify-between min-h-[16.5rem] h-auto border border-cyan-500/20 bg-gradient-to-b from-cyan-500/5 to-transparent hover:translate-y-[-4px] transition-transform duration-300 select-none">
+          <div>
+            <div class="flex items-center gap-2.5 mb-3 text-cyan-400 select-none">
+              <span class="text-xl">🔮</span>
+              <h4 class="text-xs uppercase tracking-wider font-semibold font-serif">Digital Aura</h4>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-light">
+              Tona in din aura. Tryck på A-S-D-F och låt kameran eller HUD forma din neon-aura.
+            </p>
+          </div>
+          <button onclick="triggerFullScreenPause('aura')" class="w-full px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-600 hover:to-indigo-600 text-white rounded-xl text-xs font-semibold shadow-md shadow-cyan-500/10 transition-all">
+            Starta Aura Tuner
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Peaceful Footer reflection inside room -->
+      <div class="text-center text-[10px] text-slate-400 dark:text-slate-500 select-none italic font-serif leading-normal mt-4">
+        "The tide recedes, yet the ocean remains. Take all the time you need here."
+      </div>
+
+      <!-- Start Over Action button -->
+      <div class="mt-8 mb-4">
+        <button id="reset-button" class="px-5 py-2.5 border border-slate-300 dark:border-white/10 text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-400 rounded-full text-xs font-medium tracking-wide transition-colors flex items-center gap-2 select-none">
+          <i class="fa-solid fa-arrows-rotate text-[10px]"></i>
+          <span>Clear &amp; Dump More</span>
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== FULL-SCREEN IMMERSIVE SENSORIC OVERLAYS ==================== -->
+  
+  <!-- MENTAL WORKER: PITCH-BLACK FOCUS SCREEN -->
+  <div id="immersive-mental-screen" class="fixed inset-0 bg-black z-50 flex-col items-center justify-center hidden select-none transition-opacity duration-1000 opacity-0">
+    <button onclick="exitFullScreenPause()" class="absolute top-6 right-6 text-white/35 hover:text-white p-3 rounded-full hover:bg-white/5 transition-colors z-50">
+      <i class="fa-solid fa-xmark text-lg"></i>
+    </button>
+    
+    <!-- Zen Nebula & Constellations Focus Canvas -->
+    <canvas id="focus-canvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+
+    <div class="text-center max-w-sm px-6 flex flex-col items-center z-10 relative">
+      <h3 class="text-xl font-serif text-white/90 font-light mb-1.5 select-none">Focus Point</h3>
+      <p id="hold-instruction-label" class="text-xs text-white/45 mb-10 font-light leading-relaxed h-10 select-none">
+        Click and hold your pointer down on the golden orb to lock browser focus.
+      </p>
+
+      <!-- Glowing Focus Anchor Orb -->
+      <div class="glowing-orb-wrapper mb-12">
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div id="interactive-glow-orb" class="glowing-focus-orb"></div>
+      </div>
+
+      <!-- Focus Progress Bar -->
+      <div class="w-40 bg-white/10 h-0.5 rounded-full overflow-hidden mb-2.5">
+        <div id="focus-progress-bar" class="w-0 bg-amber-400 h-full transition-all duration-300"></div>
+      </div>
+      <span class="text-[10px] text-white/35 tracking-widest select-none" id="focus-time-display">0:30</span>
+    </div>
+  </div>
+
+
+  <!-- PHYSICAL WORKER: SOMATIC GUIDED BREATHING SCREEN -->
+  <div id="immersive-somatic-screen" class="fixed inset-0 bg-slate-900 z-50 flex-col items-center justify-between py-12 px-6 hidden select-none transition-opacity duration-1000 opacity-0">
+    <button onclick="exitFullScreenPause()" class="absolute top-6 right-6 text-white/45 hover:text-white p-3 rounded-full hover:bg-white/5 transition-colors z-50">
+      <i class="fa-solid fa-xmark text-lg"></i>
+    </button>
+
+    <div class="text-center max-w-md mt-6 select-none pointer-events-none">
+      <h3 id="somatic-prompt-title" class="text-2xl sm:text-3xl font-serif text-white font-medium tracking-wide">Ground yourself</h3>
+      <p id="somatic-prompt-description" class="text-sm sm:text-base text-slate-200 mt-3.5 font-light leading-relaxed h-16 max-w-sm mx-auto">
+        We will pace your breaths and relax your body. Let your arms hang loosely.
+      </p>
+    </div>
+
+    <!-- Breathing circles -->
+    <div class="flex flex-col items-center justify-center select-none pointer-events-none">
+      <div class="somatic-circle-outer">
+        <div id="somatic-breathing-inner" class="somatic-circle-inner"></div>
+      </div>
+      <div class="mt-8 text-center">
+        <span id="somatic-phase-label" class="text-2xl sm:text-3xl font-sans font-semibold tracking-widest text-white uppercase">Wait</span>
+        <span id="somatic-breath-timer" class="block text-sm text-slate-300 mt-1 font-light">4s</span>
+      </div>
+    </div>
+
+    <!-- Cycle progress indicators -->
+    <div class="flex flex-col items-center gap-2">
+      <div class="flex items-center gap-1.5">
+        <div class="w-1.5 h-1.5 rounded-full bg-white/20" id="step-dot-1"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-white/20" id="step-dot-2"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-white/20" id="step-dot-3"></div>
+        <div class="w-1.5 h-1.5 rounded-full bg-white/20" id="step-dot-4"></div>
+      </div>
+      <span class="text-[9px] text-white/30 tracking-widest uppercase">Grounding Cycle Progress</span>
+    </div>
+  </div>
+
+
+  <!-- SOUND BATH: AUDIO HORIZON SCREEN -->
+  <div id="immersive-audio-screen" class="fixed inset-0 bg-black z-50 flex-col items-center justify-between py-12 px-6 hidden select-none transition-opacity duration-1000 opacity-0">
+    <!-- Close Immersive Button -->
+    <button onclick="exitFullScreenPause()" class="absolute top-6 right-6 text-white/35 hover:text-white p-3 rounded-full hover:bg-white/5 transition-colors">
+      <i class="fa-solid fa-xmark text-lg"></i>
+    </button>
+
+    <!-- Top instructions -->
+    <div class="text-center max-w-xs mt-4">
+      <h3 class="text-xl font-serif text-white/90 font-light">Audio Horizon</h3>
+      <p class="text-[11px] text-white/45 mt-2.5 font-light leading-relaxed">
+        Close your eyes. Wear headphones. Let the sound wash slowly from left to right ear.
+      </p>
+    </div>
+
+    <!-- Center glowing horizon line -->
+    <div class="flex flex-col items-center justify-center w-full max-w-md px-6">
+      <div class="w-full relative flex items-center justify-center h-20">
+        <!-- Visual anchor line that sways and leans based on sound pan -->
+        <div id="audio-horizon-line" class="w-64 h-0.5 rounded-full transition-all duration-75"></div>
+      </div>
+      <span id="audio-horizon-direction" class="text-[9px] text-white/30 uppercase tracking-widest mt-6 h-4">Centered</span>
+    </div>
+
+    <!-- Bottom countdown progress -->
+    <div class="flex flex-col items-center gap-2">
+      <div class="w-32 bg-white/10 h-0.5 rounded-full overflow-hidden">
+        <div id="audio-progress-bar" class="w-0 bg-amber-400 h-full transition-all duration-300"></div>
+      </div>
+      <span class="text-[10px] text-white/35 tracking-widest" id="audio-time-display">1:00</span>
+    </div>
+  </div>
+
+
+  <!-- ZEN NEBULA: INTERACTIVE SANDBOX SCREEN -->
+  <div id="immersive-sandbox-screen" class="fixed inset-0 bg-black z-50 flex-col items-center justify-between py-10 px-6 hidden select-none transition-opacity duration-1000 opacity-0">
+    <!-- Close Immersive Button -->
+    <button onclick="exitFullScreenPause()" class="absolute top-6 right-6 text-white/35 hover:text-white p-3 rounded-full hover:bg-white/5 transition-colors z-50">
+      <i class="fa-solid fa-xmark text-lg"></i>
+    </button>
+
+    <!-- Top instructions -->
+    <div class="text-center max-w-sm mt-4 select-none pointer-events-none z-10">
+      <h3 class="text-xl font-serif text-white/90 font-light">Zen Nebula Sandbox</h3>
+      <p class="text-[11px] text-white/45 mt-2.5 font-light leading-relaxed">
+        Draw slow swirls to leave stardust paths. Hold click to create a gravity vortex. Let your shoulders fall as you paint the sky.
+      </p>
+    </div>
+
+    <!-- The Sandbox Interactive Canvas -->
+    <canvas id="sandbox-canvas" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+
+    <!-- Bottom focus target helper -->
+    <div class="text-center text-[10px] text-white/30 tracking-widest uppercase mb-4 pointer-events-none z-10 select-none" id="sandbox-tip-label">
+      Drag pointer to begin chime sequence
+    </div>
+  </div>
+
+
+  <!-- VIP SANCTUARY: THE ULTIMATE ELITE LOUNGE -->
+  <div id="immersive-vip-screen" class="fixed inset-0 bg-slate-950 z-50 flex-col items-center justify-between py-8 px-6 hidden select-none transition-opacity duration-1000 opacity-0 overflow-hidden">
+    <!-- Close Immersive Button -->
+    <button onclick="exitFullScreenPause()" class="absolute top-6 right-6 text-white/35 hover:text-white p-3 rounded-full hover:bg-white/5 transition-colors z-50">
+      <i class="fa-solid fa-xmark text-lg"></i>
+    </button>
+
+    <!-- Top VIP Tabbed Navigation Bar -->
+    <div class="flex items-center gap-2.5 p-1 rounded-full bg-white/5 border border-white/10 z-50 select-none max-w-md w-full sm:w-auto">
+      <button onclick="switchVipTab('fireplace')" id="vip-tab-fireplace" class="px-4 py-2 text-xs font-medium rounded-full text-white/60 hover:text-white transition-all flex items-center gap-1.5">
+        <i class="fa-solid fa-fire text-amber-500"></i> Hearth
+      </button>
+      <button onclick="switchVipTab('aurora')" id="vip-tab-aurora" class="px-4 py-2 text-xs font-medium rounded-full text-white/60 hover:text-white transition-all flex items-center gap-1.5">
+        <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i> Aurora Organ
+      </button>
+      <button onclick="switchVipTab('rainmaker')" id="vip-tab-rainmaker" class="px-4 py-2 text-xs font-medium rounded-full text-white/60 hover:text-white transition-all flex items-center gap-1.5">
+        <i class="fa-solid fa-cloud-showers-heavy text-cyan-400"></i> Rainmaker
+      </button>
+    </div>
+
+    <!-- VIP MODULE CONTENT SLATES -->
+    <div class="flex-grow w-full relative flex items-center justify-center z-10">
+
+      <!-- MODULE 1: THE COSMIC RESONANCE HEARTH -->
+      <div id="vip-module-fireplace" class="absolute inset-0 flex flex-col items-center justify-center hidden w-full h-full">
+        <!-- Fireplace canvas -->
+        <canvas id="fireplace-canvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+        
+        <!-- Stress input card overlay -->
+        <div class="relative z-20 max-w-sm w-full px-6 py-5 rounded-3xl glass-panel border border-white/10 bg-slate-950/40 text-center select-none backdrop-blur-md">
+          <h3 class="text-lg font-serif text-amber-100 font-light mb-1">Resonance Hearth</h3>
+          <p class="text-[10px] text-white/40 mb-4 font-light leading-relaxed">
+            Let the breathing flames consume your stress. Write it down and watch it turn to stardust.
+          </p>
+          <div class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl p-1 px-2.5">
+            <input type="text" id="stress-input" class="bg-transparent border-none outline-none text-xs text-white placeholder-white/20 flex-grow py-1.5 focus:ring-0 focus:outline-none" placeholder="What is heavy today?..." maxlength="30">
+            <button onclick="burnStressWord()" class="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-bold rounded-xl text-[10px] transition-all">
+              Burn It
+            </button>
+          </div>
+          <span id="fireplace-breathing-label" class="block text-[9px] text-amber-500/60 uppercase tracking-widest mt-4 animate-pulse">Synchronized Breathing active</span>
+        </div>
+      </div>
+
+      <!-- MODULE 2: THE LIQUID AURORA ORGAN -->
+      <div id="vip-module-aurora" class="absolute inset-0 flex flex-col items-center justify-center hidden w-full h-full">
+        <canvas id="aurora-canvas" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+        <div class="absolute bottom-6 pointer-events-none text-center select-none z-20">
+          <span class="text-[9px] text-emerald-400/40 uppercase tracking-widest block animate-pulse">Drag your cursor to paint color &amp; sound chords</span>
+        </div>
+      </div>
+
+      <!-- MODULE 3: THE BINAURAL RAINMAKER -->
+      <div id="vip-module-rainmaker" class="absolute inset-0 flex flex-col items-center justify-center hidden w-full h-full max-w-xl mx-auto px-6">
+        <div class="text-center mb-6 select-none max-w-sm pointer-events-none">
+          <h3 class="text-lg font-serif text-cyan-200 font-light mb-1">Binaural Rainmaker Grid</h3>
+          <p class="text-[10px] text-white/40 font-light leading-relaxed">
+            Drag the sound nodes around the spatial 2D room. Closer to the sides pans left/right; closer to the top filters and increases volume. Wear headphones.
+          </p>
+        </div>
+
+        <!-- Spatial grid board -->
+        <div id="rainmaker-grid" class="w-full aspect-video rounded-3xl bg-slate-950/50 border border-white/5 relative overflow-hidden backdrop-blur-sm shadow-2xl flex items-center justify-center">
+          <!-- Ambient circular rings indicating spatial depth -->
+          <div class="absolute w-3/4 aspect-square rounded-full border border-white/5 pointer-events-none"></div>
+          <div class="absolute w-1/2 aspect-square rounded-full border border-white/5 pointer-events-none"></div>
+          <div class="absolute w-1/4 aspect-square rounded-full border border-white/5 pointer-events-none"></div>
+          <div class="absolute h-full w-[1px] bg-white/5 left-1/2 pointer-events-none"></div>
+          <div class="absolute w-full h-[1px] bg-white/5 top-1/2 pointer-events-none"></div>
+
+          <!-- Ambient lightning flash simulator overlay -->
+          <div id="lightning-flash" class="lightning-flash-layer"></div>
+
+          <!-- Draggable Sound Nodes -->
+          <div id="node-rain" class="rainmaker-node bg-cyan-500/20 border-cyan-400" style="left: 20%; top: 30%;" data-sound="rain">
+            <!-- Mini active visual waveform -->
+            <div class="mini-waveform select-none" style="--bar-color: #22d3ee;">
+              <div class="waveform-bar" id="bar-rain-1"></div>
+              <div class="waveform-bar" id="bar-rain-2"></div>
+              <div class="waveform-bar" id="bar-rain-3"></div>
+            </div>
+            <span class="node-label select-none">Rain</span>
+          </div>
+          <div id="node-waves" class="rainmaker-node bg-emerald-500/20 border-emerald-400" style="left: 80%; top: 40%;" data-sound="waves">
+            <div class="mini-waveform select-none" style="--bar-color: #34d399;">
+              <div class="waveform-bar" id="bar-waves-1"></div>
+              <div class="waveform-bar" id="bar-waves-2"></div>
+              <div class="waveform-bar" id="bar-waves-3"></div>
+            </div>
+            <span class="node-label select-none">Waves</span>
+          </div>
+          <div id="node-leaves" class="rainmaker-node bg-amber-500/20 border-amber-400" style="left: 35%; top: 70%;" data-sound="leaves">
+            <div class="mini-waveform select-none" style="--bar-color: #fbbf24;">
+              <div class="waveform-bar" id="bar-leaves-1"></div>
+              <div class="waveform-bar" id="bar-leaves-2"></div>
+              <div class="waveform-bar" id="bar-leaves-3"></div>
+            </div>
+            <span class="node-label select-none">Wind</span>
+          </div>
+          <div id="node-chimes" class="rainmaker-node bg-pink-500/20 border-pink-400" style="left: 65%; top: 75%;" data-sound="chimes">
+            <div class="mini-waveform select-none" style="--bar-color: #f472b6;">
+              <div class="waveform-bar" id="bar-chimes-1"></div>
+              <div class="waveform-bar" id="bar-chimes-2"></div>
+              <div class="waveform-bar" id="bar-chimes-3"></div>
+            </div>
+            <span class="node-label select-none">Chimes</span>
+          </div>
+        </div>
+
+        <!-- Preset Autopilot Selector Dock -->
+        <div class="preset-dock mt-5 select-none" id="rainmaker-preset-dock">
+          <button onclick="triggerRainmakerPreset('storm')" id="preset-storm" class="preset-btn"><i class="fa-solid fa-bolt text-cyan-400"></i> Midnight Storm</button>
+          <button onclick="triggerRainmakerPreset('forest')" id="preset-forest" class="preset-btn"><i class="fa-solid fa-tree text-emerald-400"></i> Forest Canopy</button>
+          <button onclick="triggerRainmakerPreset('shore')" id="preset-shore" class="preset-btn"><i class="fa-solid fa-sun text-amber-400"></i> Sunset Shore</button>
+          <button onclick="triggerRainmakerPreset('custom')" id="preset-custom" class="preset-btn active"><i class="fa-solid fa-sliders text-slate-400"></i> Custom</button>
+        </div>
+
+        <div class="w-full flex items-center justify-between mt-4 text-[10px] text-white/30 uppercase tracking-widest px-2">
+          <span>🔊 Left Channel</span>
+          <span class="animate-pulse">3D Spatial Headphone space active</span>
+          <span>Right Channel 🔊</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Status Bar -->
+    <div class="text-center text-[10px] text-white/20 select-none z-20 pb-2 pointer-events-none">
+      ✨ Anor VIP Sanctuary Elite Suite
+    </div>
+  </div>
+
+  <!-- DIGITAL AURA TUNER: INTERACTIVE NEON SENSORY SCREEN -->
+  <div id="immersive-aura-screen" class="fixed inset-0 bg-slate-950 z-50 flex-col items-center justify-between py-8 px-6 hidden select-none transition-opacity duration-1000 opacity-0 overflow-hidden">
+    <!-- Close Button -->
+    <button onclick="exitFullScreenPause()" class="absolute top-6 right-6 text-white/35 hover:text-white p-3 rounded-full hover:bg-white/5 transition-colors z-50">
+      <i class="fa-solid fa-xmark text-lg"></i>
+    </button>
+
+    <!-- Top instructions & Setup Controls -->
+    <div class="text-center max-w-xl mt-4 select-none z-10 relative">
+      <h3 class="text-xl sm:text-2xl font-serif text-white/90 font-light tracking-wide mb-1 select-none">
+        Digital Aura Tuner
+      </h3>
+      <p class="text-xs text-white/50 max-w-md mx-auto mb-4 font-light leading-relaxed select-none">
+        Placera fingrarna på A-S-D-F och titta in i kameran för att tona in din digitala aura.
+      </p>
+      
+      <!-- Safe Toggles for Sound, Camera & Microphone -->
+      <div class="flex items-center justify-center gap-3.5 mt-2">
+        <button id="aura-audio-btn" onclick="toggleAuraAudio()" class="px-4 py-2 border border-emerald-500/30 bg-emerald-500/10 text-xs font-semibold text-emerald-400 rounded-xl hover:bg-emerald-500/20 active:scale-95 transition-all shadow-[0_0_12px_rgba(16,185,129,0.1)] flex items-center gap-2">
+          <i class="fa-solid fa-play"></i> <span>Starta ljudet</span>
+        </button>
+        <button id="aura-camera-btn" onclick="toggleAuraCamera()" class="px-4 py-2 border border-slate-500/30 bg-white/5 text-xs font-semibold text-slate-300 rounded-xl hover:bg-white/10 active:scale-95 transition-all flex items-center gap-2">
+          <i class="fa-solid fa-video-slash"></i> <span>Kamera: AV</span>
+        </button>
+        <button id="aura-mic-btn" onclick="toggleAuraMic()" class="px-4 py-2 border border-slate-500/30 bg-white/5 text-xs font-semibold text-slate-300 rounded-xl hover:bg-white/10 active:scale-95 transition-all flex items-center gap-2">
+          <i class="fa-solid fa-microphone-slash"></i> <span>Mikrofon: AV</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Center HTML5 Canvas displaying the Neon Aura -->
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+      <canvas id="aura-canvas" class="w-full h-full"></canvas>
+    </div>
+
+    <!-- Upper Right Circular Camera picture-in-picture Viewport -->
+    <div id="aura-video-container" class="absolute top-6 right-20 w-24 h-24 rounded-full overflow-hidden border border-white/10 bg-slate-900/80 shadow-[0_0_20px_rgba(255,255,255,0.05)] z-20 flex items-center justify-center transition-all duration-500">
+      <!-- Hidden WebRTC Video element -->
+      <video id="aura-video" class="absolute w-full h-full object-cover scale-x-[-1] hidden" autoplay playsinline muted></video>
+      
+      <!-- Breathing placeholder symbol shown when camera is OFF -->
+      <div id="aura-video-placeholder" class="flex flex-col items-center justify-center text-center p-2 text-white/30 animate-pulse select-none">
+        <div class="w-8 h-8 rounded-full border border-dashed border-white/20 flex items-center justify-center mb-1">
+          <i class="fa-solid fa-fingerprint text-xs"></i>
+        </div>
+        <span class="text-[8px] uppercase tracking-wider">Aura Safe</span>
+      </div>
+    </div>
+
+    <!-- Bottom Biometric Status Overlay HUD -->
+    <div class="relative z-10 max-w-sm w-full px-5 py-4 rounded-3xl glass-panel border border-white/10 bg-slate-950/40 text-center select-none backdrop-blur-md mb-2">
+      <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-white/5">
+        <span class="text-[9px] text-white/30 uppercase tracking-widest">Biometrisk Status</span>
+        <span id="aura-status-badge" class="text-[9px] text-cyan-400 font-semibold tracking-wider uppercase">Neutral / Avslappnad</span>
+      </div>
+      
+      <!-- Premium Aura Themes Selector Dock -->
+      <div class="preset-dock mt-2 mb-2 flex justify-center scale-90 border-white/5" id="aura-theme-dock" style="background: rgba(255,255,255,0.02); padding: 2px;">
+        <button onclick="setAuraTheme('cosmic')" id="aura-theme-cosmic" class="preset-btn active" style="padding: 4px 10px; font-size: 0.6rem;"><i class="fa-solid fa-user-astronaut"></i> Cosmic</button>
+        <button onclick="setAuraTheme('solar')" id="aura-theme-solar" class="preset-btn" style="padding: 4px 10px; font-size: 0.6rem;"><i class="fa-solid fa-sun"></i> Solar</button>
+        <button onclick="setAuraTheme('forest')" id="aura-theme-forest" class="preset-btn" style="padding: 4px 10px; font-size: 0.6rem;"><i class="fa-solid fa-tree"></i> Forest</button>
+        <button onclick="setAuraTheme('abyssal')" id="aura-theme-abyssal" class="preset-btn" style="padding: 4px 10px; font-size: 0.6rem;"><i class="fa-solid fa-water"></i> Abyssal</button>
+      </div>
+      
+      <!-- Premium Aura Musical Scales Selector Dock -->
+      <div class="preset-dock mt-1 mb-3 flex justify-center scale-90 border-white/5" id="aura-scale-dock" style="background: rgba(255,255,255,0.02); padding: 2px;">
+        <button onclick="setAuraScale('zen')" id="aura-scale-zen" class="preset-btn active" style="padding: 4px 10px; font-size: 0.6rem;"><i class="fa-solid fa-om"></i> Zen Calm</button>
+        <button onclick="setAuraScale('cosmic')" id="aura-scale-cosmic" class="preset-btn" style="padding: 4px 10px; font-size: 0.6rem;"><i class="fa-solid fa-shuttle-space"></i> Cosmic Lydian</button>
+        <button onclick="setAuraScale('solfeggio')" id="aura-scale-solfeggio" class="preset-btn" style="padding: 4px 10px; font-size: 0.6rem;"><i class="fa-solid fa-wand-magic-sparkles"></i> Solfeggio 528</button>
+        <button onclick="setAuraScale('abyssal')" id="aura-scale-abyssal" class="preset-btn" style="padding: 4px 10px; font-size: 0.6rem;"><i class="fa-solid fa-water"></i> Abyssal Dream</button>
+      </div>
+      
+      <!-- Simulated Biometrics manual trigger control dock -->
+      <div class="flex items-center justify-center gap-2 mt-2">
+        <button id="aura-state-neutral" onclick="setAuraExpression('neutral')" class="px-3.5 py-1.5 rounded-xl text-[10px] font-bold tracking-wide uppercase transition-all bg-cyan-500/20 border border-cyan-400/40 text-cyan-300">
+          Neutral
+        </button>
+        <button id="aura-state-smile" onclick="setAuraExpression('smile')" class="px-3.5 py-1.5 rounded-xl text-[10px] font-bold tracking-wide uppercase transition-all bg-white/5 border border-white/10 text-white/60 hover:text-white">
+          Leende (Glädje)
+        </button>
+      </div>
+      
+      <!-- Auto Breathing Loop HUD indicator -->
+      <div class="flex items-center justify-center gap-1.5 mt-3 text-[9px] text-white/30">
+        <div id="aura-pulsing-dot" class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></div>
+        <span id="aura-pulse-text">Automatisk Andningscykel Aktiv</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== VAULT DETAILS POPUP MODAL ==================== -->
+  <div id="vault-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 items-center justify-center hidden select-none transition-opacity duration-300 opacity-0 px-4">
+    <div class="glass-panel dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 relative shadow-2xl scale-95 transition-transform duration-300" id="vault-modal-card">
+      <button onclick="toggleVaultModal(false)" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 dark:hover:text-white p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-4">
+        <div class="text-2xl text-sage-500 dark:text-sage-300">
+          <i class="fa-solid fa-box-open"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-serif font-medium text-slate-800 dark:text-slate-100">Secured for Tomorrow</h3>
+          <p class="text-[10px] text-slate-400">Locked safely away so you don't have to carry them today.</p>
+        </div>
+      </div>
+
+      <!-- Locked items -->
+      <div class="max-h-48 overflow-y-auto pr-1 my-3 border-y border-slate-200/30 dark:border-white/5 py-2">
+        <ul id="vault-items-list" class="space-y-2">
+          <!-- Populated dynamically with locked items -->
+        </ul>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 select-none">
+        <span class="flex items-center gap-1">
+          <i class="fa-solid fa-lock text-sage-500 dark:text-sage-300"></i>
+          <span>Encrypted Locally</span>
+        </span>
+        <button onclick="toggleVaultModal(false)" class="px-3.5 py-1.5 bg-sage-500 text-white font-medium rounded-xl hover:bg-sage-600 transition-colors">
+          Leave Locked
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Footer -->
+  <footer class="w-full max-w-7xl mx-auto px-6 py-4 text-center text-[10px] text-slate-400 dark:text-slate-500 select-none z-20">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-slate-200/20 dark:border-white/5 pt-3">
+      <p>© 2026 Anor. Decompress. Ground. Breathe.</p>
+      <div class="flex gap-3">
+        <a href="#" class="hover:underline">Terms</a>
+        <a href="#" class="hover:underline">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
+  </div>
+
+  <!-- Tone.js for premium web audio synthesis -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.58/Tone.js"></script>
+
+  <!-- Sound engine and offloading pipeline controls script -->
+  <script src="app.js?v=1.19"></script>
+</body>
+</html>
